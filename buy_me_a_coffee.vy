@@ -1,4 +1,4 @@
-# pragma version 0.4.0
+# pragma version 0.4.1
 """
 @license MIT 
 @title Buy Me A Coffee!
@@ -26,17 +26,25 @@ interface AggregatorV3Interface:
     def version() -> uint256: view
     def latestAnswer() -> int256: view
 
+price_feed: AggregatorV3Interface
+
 minimum_usd: uint256
 
 @deploy
-def __init__():
+def __init__(price_feed_address: address):
     self.minimum_usd = 5
+    self.price_feed = AggregatorV3Interface(price_feed_address)
 
 @internal
 @view
-def _get_eth_to_usd_rate() -> int256:
-    price_feed: AggregatorV3Interface = AggregatorV3Interface(0x694AA1769357215DE4FAC081bf1f309aDC325306)
-    return staticcall price_feed.latestAnswer()
+def _get_eth_to_usd_rate(eth_amount: uint256) -> uint256:
+    # price_feed: 8 decimals places
+    price: int256 = staticcall self.price_feed.latestAnswer()
+
+    # eth_amount: 18 decimals places
+    eth_price: uint256 = convert(price, uint256) * (10 ** 10)
+
+    return eth_price * eth_amount
 
 @external
 @payable
