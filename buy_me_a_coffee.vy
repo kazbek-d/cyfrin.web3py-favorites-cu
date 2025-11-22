@@ -30,21 +30,32 @@ price_feed: AggregatorV3Interface
 
 minimum_usd: uint256
 
+E_10: constant(uint256) = 10 ** 10
+E_18: constant(uint256) = 10 ** 18
+
+
 @deploy
 def __init__(price_feed_address: address):
-    self.minimum_usd = 5
+    self.minimum_usd = 5 * E_18
     self.price_feed = AggregatorV3Interface(price_feed_address)
+
 
 @internal
 @view
 def _get_eth_to_usd_rate(eth_amount: uint256) -> uint256:
     # price_feed: 8 decimals places
     price: int256 = staticcall self.price_feed.latestAnswer()
-
     # eth_amount: 18 decimals places
-    eth_price: uint256 = convert(price, uint256) * (10 ** 10)
+    eth_price: uint256 = convert(price, uint256) * E_10
+    eth_amount_in_usd: uint256 = (eth_price * eth_amount) // E_18
+    return eth_amount_in_usd
 
-    return eth_price * eth_amount
+
+@external
+@view
+def get_eth_to_usd_rate(eth_amount: uint256) -> uint256:
+    return self._get_eth_to_usd_rate(eth_amount)
+
 
 @external
 @payable
@@ -55,8 +66,8 @@ def fund():
 
     1. How do we send ETH to this contract?
     """
-    # wei, ether, gwei
-    assert msg.value >= as_wei_value(1, "ether"), "You must spend more ETH!" 
+    usd_value_of_eth: uint256 = self._get_eth_to_usd_rate(msg.value)
+    assert usd_value_of_eth >= self.minimum_usd, "You must spend more USD!" 
     pass
 
 @external
