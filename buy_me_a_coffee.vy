@@ -34,7 +34,8 @@ minimum_usd: immutable(uint256)
 E_10: constant(uint256) = 10 ** 10
 E_18: constant(uint256) = 10 ** 18
 
-funders: DynArray[address, 1000]
+funders: public(DynArray[address, 1000])
+funder_to_amount_funded: public(HashMap[address, uint256])
 
 @deploy
 def __init__(price_feed_address: address):
@@ -70,6 +71,7 @@ def fund():
     usd_value_of_eth: uint256 = self._get_eth_to_usd_rate(msg.value)
     assert usd_value_of_eth >= minimum_usd, "You must spend more USD!" 
     self.funders.append(msg.sender)
+    self.funder_to_amount_funded[msg.sender] += msg.value
 
 @external
 @nonreentrant
@@ -79,4 +81,6 @@ def withdraw():
     """
     assert msg.sender == owner_address, "Not the contract owner!" 
     send(owner_address, self.balance)
+    for funder:address in self.funders:
+        self.funder_to_amount_funded[funder] = 0
     self.funders = []
