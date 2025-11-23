@@ -89,7 +89,8 @@ def withdraw():
     Withdraw $ to owner
     """
     assert msg.sender == OWNER_ADDRESS, "Not the contract owner!" 
-    send(OWNER_ADDRESS, self.balance)
+    #send(OWNER_ADDRESS, self.balance)
+    raw_call(OWNER_ADDRESS, b"", value = self.balance)
     for funder:address in self.funders:
         self.funder_to_amount_funded[funder] = 0
     self.funders = []
