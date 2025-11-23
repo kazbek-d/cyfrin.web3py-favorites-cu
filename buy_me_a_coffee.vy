@@ -25,30 +25,29 @@ interface AggregatorV3Interface:
     def description() -> String[1000]: view
     def version() -> uint256: view
     def latestAnswer() -> int256: view
-price_feed: AggregatorV3Interface
 
-owner_address: immutable(address)
-
-minimum_usd: immutable(uint256)
-
+# Constants & Immutibles
+PRICE_FEED: immutable(AggregatorV3Interface)
+OWNER_ADDRESS: public(immutable(address))
 E_10: constant(uint256) = 10 ** 10
 E_18: constant(uint256) = 10 ** 18
+MINIMUM_USD: public(constant(uint256)) = 5 * E_18
 
+# Storage
 funders: public(DynArray[address, 1000])
 funder_to_amount_funded: public(HashMap[address, uint256])
 
 @deploy
-def __init__(price_feed_address: address):
-    owner_address = msg.sender
-    minimum_usd = 5 * E_18
-    self.price_feed = AggregatorV3Interface(price_feed_address)
+def __init__(PRICE_FEED_address: address):
+    OWNER_ADDRESS = msg.sender
+    PRICE_FEED = AggregatorV3Interface(PRICE_FEED_address)
 
 
 @internal
 @view
 def _get_eth_to_usd_rate(eth_amount: uint256) -> uint256:
-    # price_feed: 8 decimals places
-    price: int256 = staticcall self.price_feed.latestAnswer()
+    # PRICE_FEED: 8 decimals places
+    price: int256 = staticcall PRICE_FEED.latestAnswer()
     # eth_amount: 18 decimals places
     eth_price: uint256 = convert(price, uint256) * E_10
     eth_amount_in_usd: uint256 = (eth_price * eth_amount) // E_18
@@ -69,7 +68,7 @@ def fund():
     Have a minimum $ amount send
     """
     usd_value_of_eth: uint256 = self._get_eth_to_usd_rate(msg.value)
-    assert usd_value_of_eth >= minimum_usd, "You must spend more USD!" 
+    assert usd_value_of_eth >= MINIMUM_USD, "You must spend more USD!" 
     self.funders.append(msg.sender)
     self.funder_to_amount_funded[msg.sender] += msg.value
 
@@ -79,8 +78,8 @@ def withdraw():
     """
     Withdraw $ to owner
     """
-    assert msg.sender == owner_address, "Not the contract owner!" 
-    send(owner_address, self.balance)
+    assert msg.sender == OWNER_ADDRESS, "Not the contract owner!" 
+    send(OWNER_ADDRESS, self.balance)
     for funder:address in self.funders:
         self.funder_to_amount_funded[funder] = 0
     self.funders = []
