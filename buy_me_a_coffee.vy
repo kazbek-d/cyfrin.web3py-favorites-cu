@@ -60,9 +60,9 @@ def get_eth_to_usd_rate(eth_amount: uint256) -> uint256:
     return self._get_eth_to_usd_rate(eth_amount)
 
 
-@external
+@internal
 @payable
-def fund():
+def _fund():
     """
     Allows users to send $ to this contract.
     Have a minimum $ amount send
@@ -71,6 +71,16 @@ def fund():
     assert usd_value_of_eth >= MINIMUM_USD, "You must spend more USD!" 
     self.funders.append(msg.sender)
     self.funder_to_amount_funded[msg.sender] += msg.value
+
+@external
+@payable
+def fund():
+    self._fund()
+
+@external
+@payable
+def __default__():
+    self._fund()
 
 @external
 @nonreentrant
