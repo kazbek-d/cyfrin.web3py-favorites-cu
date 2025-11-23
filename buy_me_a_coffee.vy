@@ -25,10 +25,11 @@ interface AggregatorV3Interface:
     def description() -> String[1000]: view
     def version() -> uint256: view
     def latestAnswer() -> int256: view
-
 price_feed: AggregatorV3Interface
 
-minimum_usd: uint256
+owner_address: immutable(address)
+
+minimum_usd: immutable(uint256)
 
 E_10: constant(uint256) = 10 ** 10
 E_18: constant(uint256) = 10 ** 18
@@ -36,7 +37,8 @@ E_18: constant(uint256) = 10 ** 18
 
 @deploy
 def __init__(price_feed_address: address):
-    self.minimum_usd = 5 * E_18
+    owner_address = msg.sender
+    minimum_usd = 5 * E_18
     self.price_feed = AggregatorV3Interface(price_feed_address)
 
 
@@ -63,13 +65,15 @@ def fund():
     """
     Allows users to send $ to this contract.
     Have a minimum $ amount send
-
-    1. How do we send ETH to this contract?
     """
     usd_value_of_eth: uint256 = self._get_eth_to_usd_rate(msg.value)
-    assert usd_value_of_eth >= self.minimum_usd, "You must spend more USD!" 
-    pass
+    assert usd_value_of_eth >= minimum_usd, "You must spend more USD!" 
 
 @external
+@nonreentrant
 def withdraw():
-    pass
+    """
+    Withdraw $ to owner
+    """
+    assert msg.sender == owner_address, "Not the contract owner!" 
+    send(owner_address, self.balance)
